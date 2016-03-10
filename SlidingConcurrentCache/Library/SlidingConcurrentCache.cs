@@ -34,6 +34,8 @@ namespace SlidingConcurrentCache.Library
             }
         }
 
+        public int CachedItemCount { get; } = __cache.Count;
+
         public async Task<TValue> GetOrAdd(TKey key, Func<TKey, Task<TValue>> valueFactory, ulong expireDurationInSeconds = 0ul, ulong slideDurationInSeconds = 0ul)
         {
             DateTimeOffset now = DateTimeOffset.UtcNow;

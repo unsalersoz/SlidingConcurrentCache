@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using JetBrains.dotMemoryUnit;
 using NUnit.Framework;
 using SlidingConcurrentCache.Interface;
 using SlidingConcurrentCache.Library;
@@ -7,8 +8,10 @@ using SlidingConcurrentCache.Library;
 namespace SlidingConcurrentCacheTests.Library
 {
     [TestFixture]
+    [DotMemoryUnit(FailIfRunWithoutSupport = false)]
     public class SlidingConcurrentCacheTests
     {
+        #region ValueFactories
         private static Task<string> ValueFactoryForExpireTest(int arg)
         {
             Assert.Pass("Successfully landed mis-cache");
@@ -23,6 +26,31 @@ namespace SlidingConcurrentCacheTests.Library
 
         private static Task<string> ValueFactoryForRenewCacheTest(int i) => Task.FromResult(i.ToString());
 
+        private static Task<string> ValueFactoryForMemoryTest1(Guid guid) => Task.FromResult(Convert.ToBase64String(guid.ToByteArray(), Base64FormattingOptions.None));
+        #endregion
+
+        [Test, DotMemoryUnit(CollectAllocations = true)]
+        public async Task MemoryTest1()
+        {
+           ISlidingConcurrentCache<Guid, string> tempCache;
+
+            using (tempCache = new SlidingConcurrentCache<Guid, string>(1000))
+            {
+                await Task.Run(() => Parallel.For(0, 1000000, async i =>
+                {
+                    Guid guid = Guid.NewGuid();
+                    await tempCache.GetOrAdd(guid, ValueFactoryForMemoryTest1, 1);
+                }));
+
+                await Task.Delay(1000);
+                Assert.AreEqual(0, tempCache.CachedItemCount);
+            }
+
+            // ReSharper disable once UnusedVariable
+            Assert.ThrowsAsync<ObjectDisposedException>(async () => { bool temp = await Task.FromResult(tempCache.IsDisposed); });
+        }
+
+
         [Test]
         public void DisposeTest()
         {
@@ -31,6 +59,7 @@ namespace SlidingConcurrentCacheTests.Library
 
             using (tempCache = new SlidingConcurrentCache<int, string>(100))
             {
+                // ReSharper disable once UnusedVariable
                 testDelegate = () => { bool disposed = tempCache.IsDisposed; };
                 Assert.IsFalse(tempCache.IsDisposed);
                 Assert.DoesNotThrow(testDelegate);
@@ -99,6 +128,7 @@ namespace SlidingConcurrentCacheTests.Library
         {
             ISlidingConcurrentCache<int, string> tempCache = new SlidingConcurrentCache<int, string>();
             Assert.IsNotNull(tempCache);
+            Assert.False(tempCache.IsDisposed);
         }
     }
 }
