@@ -39,15 +39,15 @@ namespace SlidingConcurrentCacheTests.Library
                 await Task.Run(() => Parallel.For(0, 1000000, async i =>
                 {
                     Guid guid = Guid.NewGuid();
-                    await tempCache.GetOrAdd(guid, ValueFactoryForMemoryTest1, 1);
-                }));
+                    await tempCache.GetOrAdd(guid, ValueFactoryForMemoryTest1, 1).ConfigureAwait(false);
+                })).ConfigureAwait(false);
 
-                await Task.Delay(1000);
+                await Task.Delay(1000).ConfigureAwait(false);
                 Assert.AreEqual(0, tempCache.CachedItemCount);
             }
 
             // ReSharper disable once UnusedVariable
-            Assert.ThrowsAsync<ObjectDisposedException>(async () => { bool temp = await Task.FromResult(tempCache.IsDisposed); });
+            Assert.ThrowsAsync<ObjectDisposedException>(async () => { bool temp = await Task.FromResult(tempCache.IsDisposed).ConfigureAwait(false); });
         }
 
 
@@ -73,9 +73,9 @@ namespace SlidingConcurrentCacheTests.Library
         {
             ISlidingConcurrentCache<int, string> tempCache = new SlidingConcurrentCache<int, string>(100);
 
-            await tempCache.GetOrAdd(3, i => Task.FromResult(i.ToString()), 1);
-            await Task.Delay(1100);
-            string s = await tempCache.GetOrAdd(3, ValueFactoryForRenewCacheTest, 1);
+            await tempCache.GetOrAdd(3, i => Task.FromResult(i.ToString()), 1).ConfigureAwait(false);
+            await Task.Delay(1100).ConfigureAwait(false);
+            string s = await tempCache.GetOrAdd(3, ValueFactoryForRenewCacheTest, 1).ConfigureAwait(false);
 
             Assert.AreEqual(3.ToString(), s);
         }
@@ -85,13 +85,13 @@ namespace SlidingConcurrentCacheTests.Library
         {
             ISlidingConcurrentCache<int, string> tempCache = new SlidingConcurrentCache<int, string>(100);
 
-            await tempCache.GetOrAdd(2, i => Task.FromResult(i.ToString()), 1, 1);
+            await tempCache.GetOrAdd(2, i => Task.FromResult(i.ToString()), 1, 1).ConfigureAwait(false);
 
-            await Task.Delay(500);
-            await tempCache.GetOrAdd(2, ValueFactoryForGetOrAddTest); //Must fetch from cache
+            await Task.Delay(500).ConfigureAwait(false);
+            await tempCache.GetOrAdd(2, ValueFactoryForGetOrAddTest).ConfigureAwait(false); //Must fetch from cache
 
-            await Task.Delay(550);
-            await tempCache.GetOrAdd(2, ValueFactoryForGetOrAddTest); //Must fetch from cache, even we passed 1 second mark. Cache should be slided.
+            await Task.Delay(550).ConfigureAwait(false);
+            await tempCache.GetOrAdd(2, ValueFactoryForGetOrAddTest).ConfigureAwait(false); //Must fetch from cache, even we passed 1 second mark. Cache should be slided.
             
             Assert.Pass();
         }
@@ -101,13 +101,13 @@ namespace SlidingConcurrentCacheTests.Library
         {
             ISlidingConcurrentCache<int, string> tempCache = new SlidingConcurrentCache<int, string>(100);
 
-            await tempCache.GetOrAdd(1, i => Task.FromResult(i.ToString()), 1);
+            await tempCache.GetOrAdd(1, i => Task.FromResult(i.ToString()), 1).ConfigureAwait(false);
 
-            await Task.Delay(500);
-            await tempCache.GetOrAdd(1, ValueFactoryForGetOrAddTest); //Must fetch from cache
+            await Task.Delay(500).ConfigureAwait(false);
+            await tempCache.GetOrAdd(1, ValueFactoryForGetOrAddTest).ConfigureAwait(false); //Must fetch from cache
 
-            await Task.Delay(550);
-            await tempCache.GetOrAdd(1, ValueFactoryForExpireTest); //Must fetch from repository
+            await Task.Delay(550).ConfigureAwait(false);
+            await tempCache.GetOrAdd(1, ValueFactoryForExpireTest).ConfigureAwait(false); //Must fetch from repository
             Assert.Fail("Musn't hit here");
         }
 
@@ -116,10 +116,10 @@ namespace SlidingConcurrentCacheTests.Library
         {
             ISlidingConcurrentCache<int, string> tempCache = new SlidingConcurrentCache<int, string>();
 
-            string addOne = await tempCache.GetOrAdd(1, i => Task.FromResult(i.ToString()));
+            string addOne = await tempCache.GetOrAdd(1, i => Task.FromResult(i.ToString())).ConfigureAwait(false);
             Assert.IsFalse(string.IsNullOrEmpty(addOne));
 
-            string actual = await tempCache.GetOrAdd(1, ValueFactoryForGetOrAddTest);
+            string actual = await tempCache.GetOrAdd(1, ValueFactoryForGetOrAddTest).ConfigureAwait(false);
             Assert.AreEqual(1.ToString(), actual);
         }
 

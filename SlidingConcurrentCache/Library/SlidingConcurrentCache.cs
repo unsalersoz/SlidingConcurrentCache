@@ -21,6 +21,7 @@ namespace SlidingConcurrentCache.Library
             _timer = new Timer(TimerElapsed, null, intervalInMilliseconds, Timeout.Infinite);
         }
 
+        /// <exception cref="ObjectDisposedException" accessor="get">SlidingConcurrentCache</exception>
         public bool IsDisposed
         {
             get
@@ -41,12 +42,6 @@ namespace SlidingConcurrentCache.Library
             DateTimeOffset now = DateTimeOffset.UtcNow;
             KeyValuePair<DateTimeOffset, TValue> value;
 
-            //if (!cacheHit && __cache.Keys.Any(cacheKey => cacheKey.Equals(key)))
-            //{
-            //	value = __cache.Where(cacheItem => cacheItem.Key.Equals(key)).Select(cacheItem => cacheItem.Value).FirstOrDefault();
-            //	cacheHit = !value.Value.Equals(default(TValue));
-            //}
-
             return __cache.TryGetValue(key, out value) && (value.Key > now)
                 ? (slideDurationInSeconds > default(ulong)
                     ? GetOrAdd(key, value.Value, now, expireDurationInSeconds, slideDurationInSeconds)
@@ -60,19 +55,24 @@ namespace SlidingConcurrentCache.Library
             GC.SuppressFinalize(this);
         }
 
+        ~SlidingConcurrentCache()
+        {
+            Dispose(false);
+        }
+
         private void Dispose(bool disposing)
         {
-            if (!_isDisposed)
+            if (_isDisposed) return;
+
+            if (disposing)
             {
-                if (disposing)
-                {
-                    //Dispose of managed resources.
-                    _timer.Dispose();
-                    __cache.Clear();
-                }
-                //Dispose of unmanaged resources.
-                _isDisposed = true;
+                //Dispose of managed resources.
+                _timer.Dispose();
+                __cache.Clear();
             }
+
+            //Dispose of unmanaged resources.
+            _isDisposed = true;
         }
 
         private static TValue GetOrAdd(TKey key, TValue value, DateTimeOffset now, ulong expireDurationInSeconds = 0ul, ulong slideDurationInSeconds = 0ul)
@@ -99,13 +99,12 @@ namespace SlidingConcurrentCache.Library
 
             Parallel.ForEach(__cache, async cacheItem =>
                                             {
-                                                if (cacheItem.Value.Key <= now)
+                                                if (cacheItem.Value.Key > now) return;
+
+                                                byte tryCount = 10;
+                                                while (!__cache.TryRemove(cacheItem.Key, out tempPair) && (tryCount-- > 0))
                                                 {
-                                                    byte tryCount = 10;
-                                                    while (!__cache.TryRemove(cacheItem.Key, out tempPair) && (tryCount-- > 0))
-                                                    {
-                                                        await Task.Delay(TimeSpan.FromSeconds(1));
-                                                    }
+                                                    await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
                                                 }
                                             });
 
