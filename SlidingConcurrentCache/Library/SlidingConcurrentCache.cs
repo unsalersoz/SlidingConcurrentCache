@@ -84,7 +84,7 @@ namespace SlidingConcurrentCache.Library
             {
                 __cache[key] = new KeyValuePair<DateTimeOffset, TValue>(expireTime, value);
             }
-            else if (slideDurationInSeconds > default(uint))
+            else if (slideDurationInSeconds > default(ulong))
             {
                 __cache[key] = new KeyValuePair<DateTimeOffset, TValue>(expireTimeValuePair.Key.AddSeconds(slideDurationInSeconds), expireTimeValuePair.Value);
             }
